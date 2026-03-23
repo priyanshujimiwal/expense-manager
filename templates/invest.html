@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Invest - Expense Tracker{% endblock %}
+
+{% block content %}
+<style>
+    .investment-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s;
+    }
+    .investment-card:hover {
+        border-color: #3498db;
+        box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
+        transform: translateY(-2px);
+    }
+    .investment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .investment-header h3 { color: #2c3e50; margin: 0; }
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+    .badge-fund { background: #e3f2fd; color: #1976d2; }
+    .badge-fd { background: #f3e5f5; color: #7b1fa2; }
+    .badge-savings { background: #e8f5e9; color: #388e3c; }
+    .investment-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+        font-size: 0.95rem;
+    }
+    .detail-item {
+        background: #f9f9f9;
+        padding: 1rem;
+        border-radius: 4px;
+    }
+    .detail-item strong { color: #2c3e50; display: block; margin-bottom: 0.25rem; }
+    .detail-item span { color: #666; }
+    .risk-low { color: #27ae60; }
+    .risk-medium { color: #f39c12; }
+    .risk-high { color: #e74c3c; }
+    .savings-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .savings-banner h2 { font-size: 1rem; opacity: 0.9; margin-bottom: 0.5rem; }
+    .savings-banner .amount { font-size: 2.5rem; font-weight: bold; }
+    .savings-info {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 2rem;
+    }
+    .savings-info strong { color: #856404; }
+    .cta-button {
+        background: #27ae60;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 1rem;
+    }
+    .cta-button:hover { background: #229954; }
+</style>
+
+<h1>💹 Investment Opportunities</h1>
+
+{% if predicted_savings > 0 %}
+    <!-- Savings Banner -->
+    <div class="savings-banner">
+        <h2>Your Monthly Savings Potential</h2>
+        <div class="amount">₹{{ "%.2f"|format(predicted_savings) }}</div>
+        <p style="margin-top: 1rem; font-size: 0.95rem;">Based on your spending patterns and ML predictions</p>
+    </div>
+
+    <!-- Investment Guide -->
+    <div class="savings-info">
+        <strong>💡 Investment Tip:</strong> Start with ₹{{ "%.0f"|format(predicted_savings) }}/month and increase as you save more. Diversify across 2-3 investments to balance risk and returns.
+    </div>
+{% endif %}
+
+<!-- Investment Options -->
+<h2>📈 Recommended Investment Options</h2>
+
+{% for investment in investments %}
+    <div class="investment-card">
+        <div class="investment-header">
+            <h3>{{ investment.name }}</h3>
+            {% if investment.type == 'Mutual Fund' %}
+                <span class="badge badge-fund">{{ investment.type }}</span>
+            {% elif investment.type == 'Fixed Deposit' %}
+                <span class="badge badge-fd">{{ investment.type }}</span>
+            {% else %}
+                <span class="badge badge-savings">{{ investment.type }}</span>
+            {% endif %}
+        </div>
+        
+        <p style="color: #666; margin-bottom: 1rem;">{{ investment.description }}</p>
+        
+        <div class="investment-details">
+            <div class="detail-item">
+                <strong>Minimum Investment</strong>
+                <span>₹{{ investment.min_investment }}</span>
+            </div>
+            <div class="detail-item">
+                <strong>Expected Returns</strong>
+                <span style="color: #27ae60; font-weight: bold;">{{ investment.expected_return }} p.a.</span>
+            </div>
+            <div class="detail-item">
+                <strong>Risk Level</strong>
+                <span>
+                    {% if investment.risk == 'Low' %}
+                        <span class="risk-low">● {{ investment.risk }}</span>
+                    {% elif investment.risk == 'Medium' or investment.risk == 'Low-Medium' %}
+                        <span class="risk-medium">● {{ investment.risk }}</span>
+                    {% else %}
+                        <span class="risk-high">● {{ investment.risk }}</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="detail-item">
+                <strong>Your Potential Monthly Return</strong>
+                {% if predicted_savings > 0 %}
+                    <span style="color: #2980b9; font-weight: bold;">₹{{ "%.2f"|format(predicted_savings * (int(investment.expected_return.split('-')[0]) / 100 / 12)) }}</span>
+                {% else %}
+                    <span>Depends on investment amount</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <button class="cta-button">Learn More & Invest</button>
+    </div>
+{% endfor %}
+
+<!-- Portfolio Suggestion -->
+<div style="background: #e8f5e9; padding: 2rem; border-radius: 8px; margin: 2rem 0;">
+    <h2 style="color: #2e7d32; margin-top: 0;">📊 Suggested Portfolio</h2>
+    <p style="color: #555; margin-bottom: 1rem;">Based on your savings potential of ₹{{ "%.0f"|format(predicted_savings) }}/month:</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div style="background: white; padding: 1rem; border-radius: 4px; border-left: 4px solid #1976d2;">
+            <strong>Growth (40%)</strong>
+            <p style="font-size: 1.3rem; color: #1976d2; margin: 0.5rem 0;">₹{{ "%.0f"|format(predicted_savings * 0.4) }}</p>
+            <small>Nifty 50 Index Fund</small>
+        </div>
+        <div style="background: white; padding: 1rem; border-radius: 4px; border-left: 4px solid #388e3c;">
+            <strong>Balanced (35%)</strong>
+            <p style="font-size: 1.3rem; color: #388e3c; margin: 0.5rem 0;">₹{{ "%.0f"|format(predicted_savings * 0.35) }}</p>
+            <small>Equity Mutual Fund</small>
+        </div>
+        <div style="background: white; padding: 1rem; border-radius: 4px; border-left: 4px solid #7b1fa2;">
+            <strong>Safety (25%)</strong>
+            <p style="font-size: 1.3rem; color: #7b1fa2; margin: 0.5rem 0;">₹{{ "%.0f"|format(predicted_savings * 0.25) }}</p>
+            <small>Fixed Deposit</small>
+        </div>
+    </div>
+    
+    <p style="margin-top: 1rem; color: #555; font-size: 0.95rem;"><strong>Note:</strong> This is a suggested allocation. Consult with a financial advisor for personalized advice based on your goals and risk tolerance.</p>
+</div>
+
+<!-- Footer Buttons -->
+<div style="margin-top: 2rem; display: flex; gap: 1rem;">
+    <a href="{{ url_for('dashboard') }}" style="text-decoration: none;"><button class="btn">← Back to Dashboard</button></a>
+    <a href="{{ url_for('predictions') }}" style="text-decoration: none;"><button class="btn" style="background: #f39c12;">View Predictions →</button></a>
+</div>
+
+{% endblock %}

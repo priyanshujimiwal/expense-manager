@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Expense Tracker{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    .chart-box {
+        background: #f9f9f9;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .stats-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .stats-box h3 { font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem; }
+    .stats-box .amount { font-size: 2rem; font-weight: bold; }
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+    .action-buttons a {
+        text-decoration: none;
+    }
+    .btn {
+        background: #3498db;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background 0.3s;
+    }
+    .btn:hover { background: #2980b9; }
+    .btn-success { background: #27ae60; }
+    .btn-success:hover { background: #229954; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1.5rem;
+    }
+    table th, table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    table th {
+        background: #f0f0f0;
+        font-weight: bold;
+    }
+    table tr:hover {
+        background: #f9f9f9;
+    }
+    @media (max-width: 768px) {
+        .dashboard-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<h1>📊 Your Expense Dashboard</h1>
+
+<!-- Stats Row -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0;">
+    <div class="stats-box">
+        <h3>Total Spent (30 days)</h3>
+        <div class="amount">₹{{ "%.2f"|format(total_spent) }}</div>
+    </div>
+    <div class="stats-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h3>Expenses Count</h3>
+        <div class="amount">{{ expenses|length }}</div>
+    </div>
+    <div class="stats-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <h3>Daily Average</h3>
+        <div class="amount">₹{{ "%.2f"|format(total_spent / 30) if total_spent > 0 else 0 }}</div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons">
+    <a href="{{ url_for('predictions') }}"><button class="btn btn-success">🤖 View Predictions</button></a>
+    <a href="{{ url_for('invest') }}"><button class="btn btn-success">💹 Investment Options</button></a>
+</div>
+
+<!-- Add Expense Section -->
+<div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin: 2rem 0;">
+    <h2>➕ Add New Expense</h2>
+    <form method="POST" action="{{ url_for('add_expense') }}" style="display: grid; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 1rem;">
+            <select name="category" required>
+                <option value="">Select Category</option>
+                <option value="Food">🍔 Food</option>
+                <option value="Transport">🚗 Transport</option>
+                <option value="Entertainment">🎬 Entertainment</option>
+                <option value="Education">📚 Education</option>
+                <option value="Shopping">🛍️ Shopping</option>
+                <option value="Utilities">💡 Utilities</option>
+                <option value="Other">📝 Other</option>
+            </select>
+            <input type="number" name="amount" placeholder="Amount (₹)" step="0.01" required>
+            <input type="text" name="description" placeholder="Description (optional)">
+        </div>
+        <button type="submit" class="btn" style="width: fit-content;">Add Expense</button>
+    </form>
+</div>
+
+<!-- Charts Section -->
+<div class="dashboard-container">
+    <div class="chart-box">
+        <h2>📈 Spending by Category (Last 30 Days)</h2>
+        <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-box">
+        <h2>📊 Category Breakdown</h2>
+        <div id="categoryList" style="margin-top: 1rem;"></div>
+    </div>
+</div>
+
+<!-- Recent Expenses Table -->
+<h2 style="margin-top: 2rem;">💳 Recent Expenses</h2>
+{% if expenses %}
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses[:20] %}
+            <tr>
+                <td><strong>{{ expense.category }}</strong></td>
+                <td style="color: #e74c3c; font-weight: bold;">₹{{ "%.2f"|format(expense.amount) }}</td>
+                <td>{{ expense.description or '-' }}</td>
+                <td>{{ expense.date.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p style="text-align: center; color: #999; padding: 2rem;">📭 No expenses yet. Add one to get started!</p>
+{% endif %}
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Fetch pie chart data
+    fetch('{{ url_for("pie_chart_data") }}')
+        .then(response => response.json())
+        .then(data => {
+            const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+            
+            // Pie Chart
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: colors.slice(0, data.labels.length),
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Category breakdown list
+            const categoryList = document.getElementById('categoryList');
+            data.labels.forEach((label, index) => {
+                const percentage = ((data.values[index] / data.values.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
+                const div = document.createElement('div');
+                div.style.marginBottom = '1rem';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>${label}</strong>
+                        <span>₹${data.values[index].toFixed(2)}</span>
+                    </div>
+                    <div style="background: #e0e0e0; height: 8px; border-radius: 4px;">
+                        <div style="background: ${colors[index]}; height: 100%; width: ${percentage}%; border-radius: 4px;"></div>
+                    </div>
+                    <small style="color: #999;">${percentage}%</small>
+                `;
+                categoryList.appendChild(div);
+            });
+        });
+</script>
+
+<div style="margin-top: 2rem; text-align: right;">
+    <a href="{{ url_for('logout') }}"><button class="btn" style="background: #e74c3c;">Logout</button></a>
+</div>
+{% endblock %}
