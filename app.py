@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import os
 import json
 from collections import defaultdict
-import pandas as pd
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
