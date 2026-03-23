@@ -26,3 +26,5 @@ typing_extensions==4.15.0
 tzdata==2025.3
 Werkzeug==2.3.7
 zipp==3.23.0
+gunicorn==21.2.0
+setuptools==68.0.0
